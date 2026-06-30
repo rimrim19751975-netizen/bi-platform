@@ -5,11 +5,11 @@ export async function createAuditLog(params: {
   action: string;
   entity: string;
   entityId?: string;
-  details?: unknown;
+  details?: Record<string, unknown>;
   ip?: string;
 }) {
   try {
-    await prisma.auditLog.create({ data: params });
+    await prisma.auditLog.create({ data: params as any });
   } catch {
     // silently fail audit logging
   }

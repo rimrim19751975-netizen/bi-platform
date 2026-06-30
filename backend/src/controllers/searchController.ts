@@ -14,7 +14,7 @@ export async function globalSearch(req: AuthRequest, res: Response, next: NextFu
 
     for (const sheet of sheets.slice(0, 10)) {
       try {
-        const fields = sheet.columns.map((c) => ({ name: c.name, type: c.dataType }));
+        const fields = sheet.columns.map((c) => ({ name: c.name, type: c.dataType, nullable: true, isPrimary: false }));
         const records = await dynamicService.search(sheet.tableName, fields, q);
         if (records.length > 0) {
           results.push({ sheetId: sheet.id, sheetName: sheet.name, tableName: sheet.tableName, records: records.slice(0, 5) });
@@ -37,7 +37,7 @@ export async function advancedSearch(req: AuthRequest, res: Response, next: Next
     if (!sheet) return res.status(404).json({ error: 'Sheet not found' });
 
     const dynamicService = await import('../services/dynamicTable');
-    const fields = sheet.columns.map((c) => ({ name: c.name, type: c.dataType }));
+    const fields = sheet.columns.map((c) => ({ name: c.name, type: c.dataType, nullable: true, isPrimary: false }));
     const results = await dynamicService.advancedSearch(sheet.tableName, fields, { field, operator, value });
 
     res.json({ results, count: results.length });

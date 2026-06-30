@@ -16,11 +16,11 @@ const JWT_REFRESH_EXPIRES_IN = process.env.JWT_REFRESH_EXPIRES_IN || '7d';
 
 function generateTokens(user: { id: string; email: string; role: string }) {
   const accessToken = jwt.sign({ userId: user.id, email: user.email, role: user.role }, JWT_SECRET, {
-    expiresIn: JWT_EXPIRES_IN,
-  });
+    expiresIn: JWT_EXPIRES_IN as string,
+  } as jwt.SignOptions);
   const refreshToken = jwt.sign({ userId: user.id }, JWT_REFRESH_SECRET, {
-    expiresIn: JWT_REFRESH_EXPIRES_IN,
-  });
+    expiresIn: JWT_REFRESH_EXPIRES_IN as string,
+  } as jwt.SignOptions);
   return { accessToken, refreshToken };
 }
 

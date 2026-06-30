@@ -35,7 +35,7 @@ export async function generatePDFReport(config: ReportConfig): Promise<Buffer> {
         doc.fontSize(14).text(sheet.name, { underline: true });
         doc.moveDown(0.5);
 
-        const fields = sheet.columns.map((c) => ({ name: c.name, type: c.dataType }));
+        const fields = sheet.columns.map((c) => ({ name: c.name, type: c.dataType, nullable: true, isPrimary: false }));
         const dynamicService = await import('./dynamicTable');
         const data = await dynamicService.getAllData(sheet.tableName, fields);
 

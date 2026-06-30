@@ -19,7 +19,7 @@ function mapFieldType(type: string): string {
 
 export async function createDynamicTable(tableName: string, columns: ColumnInfo[]): Promise<void> {
   const colDefs = columns
-    .map((col) => `"${col.name}" ${mapFieldType(col.type)} ${col.isNullable ? 'NULL' : 'NOT NULL'}`)
+    .map((col) => `"${col.name}" ${mapFieldType(col.type)} ${col.nullable ? 'NULL' : 'NOT NULL'}`)
     .join(',\n  ');
 
   const sql = `

@@ -103,7 +103,7 @@ export async function getSheet(req: AuthRequest, res: Response, next: NextFuncti
 
     const dynamicService = await import('../services/dynamicTable');
     const tableName = sheet.tableName;
-    const fields = sheet.columns.map((c) => ({ name: c.name, type: c.dataType }));
+    const fields = sheet.columns.map((c) => ({ name: c.name, type: c.dataType, nullable: true, isPrimary: false }));
 
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 50;

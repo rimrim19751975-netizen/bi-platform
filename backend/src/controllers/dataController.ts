@@ -10,7 +10,7 @@ export async function createRecord(req: AuthRequest, res: Response, next: NextFu
     if (!sheet) return res.status(404).json({ error: 'Sheet not found' });
 
     const dynamicService = await import('../services/dynamicTable');
-    const fields = sheet.columns.map((c) => ({ name: c.name, type: c.dataType }));
+    const fields = sheet.columns.map((c) => ({ name: c.name, type: c.dataType, nullable: true, isPrimary: false }));
     const record = await dynamicService.createRecord(sheet.tableName, fields, req.body.data);
 
     await createAuditLog({
@@ -35,7 +35,7 @@ export async function updateRecord(req: AuthRequest, res: Response, next: NextFu
     if (!sheet) return res.status(404).json({ error: 'Sheet not found' });
 
     const dynamicService = await import('../services/dynamicTable');
-    const fields = sheet.columns.map((c) => ({ name: c.name, type: c.dataType }));
+    const fields = sheet.columns.map((c) => ({ name: c.name, type: c.dataType, nullable: true, isPrimary: false }));
     const record = await dynamicService.updateRecord(sheet.tableName, fields, id, req.body.data);
 
     await createAuditLog({
@@ -56,11 +56,11 @@ export async function updateRecord(req: AuthRequest, res: Response, next: NextFu
 export async function deleteRecord(req: AuthRequest, res: Response, next: NextFunction) {
   try {
     const { sheetId, id } = req.params;
-    const sheet = await prisma.sheet.findUnique({ where: { id: sheetId } });
+    const sheet = await prisma.sheet.findUnique({ where: { id: sheetId }, include: { columns: true } });
     if (!sheet) return res.status(404).json({ error: 'Sheet not found' });
 
     const dynamicService = await import('../services/dynamicTable');
-    const fields = sheet.columns.map((c) => ({ name: c.name, type: c.dataType }));
+    const fields = sheet.columns.map((c) => ({ name: c.name, type: c.dataType, nullable: true, isPrimary: false }));
     await dynamicService.deleteRecord(sheet.tableName, fields, id);
 
     await createAuditLog({
@@ -85,7 +85,7 @@ export async function getRecord(req: AuthRequest, res: Response, next: NextFunct
     if (!sheet) return res.status(404).json({ error: 'Sheet not found' });
 
     const dynamicService = await import('../services/dynamicTable');
-    const fields = sheet.columns.map((c) => ({ name: c.name, type: c.dataType }));
+    const fields = sheet.columns.map((c) => ({ name: c.name, type: c.dataType, nullable: true, isPrimary: false }));
     const record = await dynamicService.getRecord(sheet.tableName, fields, id);
     if (!record) return res.status(404).json({ error: 'Record not found' });
 
@@ -102,7 +102,7 @@ export async function duplicateRecord(req: AuthRequest, res: Response, next: Nex
     if (!sheet) return res.status(404).json({ error: 'Sheet not found' });
 
     const dynamicService = await import('../services/dynamicTable');
-    const fields = sheet.columns.map((c) => ({ name: c.name, type: c.dataType }));
+    const fields = sheet.columns.map((c) => ({ name: c.name, type: c.dataType, nullable: true, isPrimary: false }));
     const record = await dynamicService.duplicateRecord(sheet.tableName, fields, id);
 
     await createAuditLog({
@@ -127,7 +127,7 @@ export async function getStats(req: AuthRequest, res: Response, next: NextFuncti
     if (!sheet) return res.status(404).json({ error: 'Sheet not found' });
 
     const dynamicService = await import('../services/dynamicTable');
-    const fields = sheet.columns.map((c) => ({ name: c.name, type: c.dataType }));
+    const fields = sheet.columns.map((c) => ({ name: c.name, type: c.dataType, nullable: true, isPrimary: false }));
     const stats = await dynamicService.getStats(sheet.tableName, fields);
 
     res.json(stats);
@@ -144,7 +144,7 @@ export async function bulkDelete(req: AuthRequest, res: Response, next: NextFunc
     if (!sheet) return res.status(404).json({ error: 'Sheet not found' });
 
     const dynamicService = await import('../services/dynamicTable');
-    const fields = sheet.columns.map((c) => ({ name: c.name, type: c.dataType }));
+    const fields = sheet.columns.map((c) => ({ name: c.name, type: c.dataType, nullable: true, isPrimary: false }));
     await dynamicService.bulkDelete(sheet.tableName, fields, ids);
 
     await createAuditLog({

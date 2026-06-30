@@ -11,7 +11,7 @@ export async function getMapData(req: AuthRequest, res: Response, next: NextFunc
     if (!sheet) return res.status(404).json({ error: 'Sheet not found' });
 
     const dynamicService = await import('../services/dynamicTable');
-    const fields = sheet.columns.map((c) => ({ name: c.name, type: c.dataType }));
+    const fields = sheet.columns.map((c) => ({ name: c.name, type: c.dataType, nullable: true, isPrimary: false }));
     const data = await dynamicService.getAllData(sheet.tableName, fields);
 
     const features = data
@@ -46,7 +46,7 @@ export async function getRegionData(req: AuthRequest, res: Response, next: NextF
       if (hasRegion) {
         try {
           const dynamicService = await import('../services/dynamicTable');
-          const fields = sheet.columns.map((c) => ({ name: c.name, type: c.dataType }));
+          const fields = sheet.columns.map((c) => ({ name: c.name, type: c.dataType, nullable: true, isPrimary: false }));
           const data = await dynamicService.getAggregatedData(
             sheet.tableName, fields, hasRegion.name, 'sum', hasAmount?.name
           );

@@ -13,7 +13,7 @@ export async function exportExcel(req: AuthRequest, res: Response, next: NextFun
     if (!sheet) return res.status(404).json({ error: 'Sheet not found' });
 
     const dynamicService = await import('../services/dynamicTable');
-    const fields = sheet.columns.map((c) => ({ name: c.name, type: c.dataType }));
+    const fields = sheet.columns.map((c) => ({ name: c.name, type: c.dataType, nullable: true, isPrimary: false }));
     const data = await dynamicService.getAllData(sheet.tableName, fields);
 
     const workbook = new ExcelJS.Workbook();
@@ -37,7 +37,7 @@ export async function exportCSV(req: AuthRequest, res: Response, next: NextFunct
     if (!sheet) return res.status(404).json({ error: 'Sheet not found' });
 
     const dynamicService = await import('../services/dynamicTable');
-    const fields = sheet.columns.map((c) => ({ name: c.name, type: c.dataType }));
+    const fields = sheet.columns.map((c) => ({ name: c.name, type: c.dataType, nullable: true, isPrimary: false }));
     const data = await dynamicService.getAllData(sheet.tableName, fields);
 
     const csv = stringify(data, { header: true, columns: fields.map((f) => f.name) });
@@ -57,7 +57,7 @@ export async function exportPDF(req: AuthRequest, res: Response, next: NextFunct
     if (!sheet) return res.status(404).json({ error: 'Sheet not found' });
 
     const dynamicService = await import('../services/dynamicTable');
-    const fields = sheet.columns.map((c) => ({ name: c.name, type: c.dataType }));
+    const fields = sheet.columns.map((c) => ({ name: c.name, type: c.dataType, nullable: true, isPrimary: false }));
     const data = await dynamicService.getAllData(sheet.tableName, fields);
 
     const doc = new PDFDocument({ margin: 30, size: 'A4', layout: data.length > 20 ? 'landscape' : 'portrait' });
@@ -73,7 +73,7 @@ export async function exportPDF(req: AuthRequest, res: Response, next: NextFunct
 
     const drawTable = () => {
       let y = doc.y;
-      headers.forEach((h, i) => doc.text(h, 30 + i * colWidth, y, { width: colWidth, bold: true }));
+      headers.forEach((h, i) => doc.font('Helvetica-Bold').text(h, 30 + i * colWidth, y, { width: colWidth }).font('Helvetica'));
       y += 15;
       data.forEach((row) => {
         if (y > doc.page.height - 40) { doc.addPage(); y = 30; }
@@ -96,7 +96,7 @@ export async function exportJSON(req: AuthRequest, res: Response, next: NextFunc
     if (!sheet) return res.status(404).json({ error: 'Sheet not found' });
 
     const dynamicService = await import('../services/dynamicTable');
-    const fields = (await prisma.column.findMany({ where: { sheetId }, orderBy: { position: 'asc' } })).map((c) => ({ name: c.name, type: c.dataType }));
+    const fields = (await prisma.column.findMany({ where: { sheetId }, orderBy: { position: 'asc' } })).map((c) => ({ name: c.name, type: c.dataType, nullable: true, isPrimary: false }));
     const data = await dynamicService.getAllData(sheet.tableName, fields);
 
     res.setHeader('Content-Type', 'application/json');

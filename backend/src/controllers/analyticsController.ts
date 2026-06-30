@@ -42,7 +42,7 @@ export async function getChartData(req: AuthRequest, res: Response, next: NextFu
     if (!sheet) return res.status(404).json({ error: 'Sheet not found' });
 
     const dynamicService = await import('../services/dynamicTable');
-    const fields = sheet.columns.map((c) => ({ name: c.name, type: c.dataType }));
+    const fields = sheet.columns.map((c) => ({ name: c.name, type: c.dataType, nullable: true, isPrimary: false }));
     const data = await dynamicService.getChartData(sheet.tableName, fields, field as string, (chartType as string) || 'bar');
 
     res.json(data);
@@ -60,7 +60,7 @@ export async function getAdvancedAnalytics(req: AuthRequest, res: Response, next
     if (!sheet) return res.status(404).json({ error: 'Sheet not found' });
 
     const dynamicService = await import('../services/dynamicTable');
-    const fields = sheet.columns.map((c) => ({ name: c.name, type: c.dataType }));
+    const fields = sheet.columns.map((c) => ({ name: c.name, type: c.dataType, nullable: true, isPrimary: false }));
     const data = await dynamicService.getAggregatedData(
       sheet.tableName, fields, groupBy as string,
       (aggregate as string) || 'count', aggField as string
@@ -81,7 +81,7 @@ export async function getTimeSeries(req: AuthRequest, res: Response, next: NextF
     if (!sheet) return res.status(404).json({ error: 'Sheet not found' });
 
     const dynamicService = await import('../services/dynamicTable');
-    const fields = sheet.columns.map((c) => ({ name: c.name, type: c.dataType }));
+    const fields = sheet.columns.map((c) => ({ name: c.name, type: c.dataType, nullable: true, isPrimary: false }));
     const data = await dynamicService.getTimeSeries(
       sheet.tableName, fields, dateField as string,
       valueField as string, (interval as string) || 'month'

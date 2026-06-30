@@ -34,6 +34,7 @@ app.use(cors({
       process.env.APP_URL || 'http://localhost:3000',
       'http://localhost:3001',
       /\.ngrok-free\.app$/,
+      /\.vercel\.app$/,
     ];
     if (!origin || allowedOrigins.some((o) => (typeof o === 'string' ? o === origin : o.test(origin)))) {
       callback(null, true);
@@ -78,9 +79,13 @@ async function main() {
   }
 }
 
-main();
+if (process.env.VERCEL !== '1') {
+  main();
+}
 
 process.on('SIGTERM', async () => {
   await prisma.$disconnect();
   process.exit(0);
 });
+
+export default app;
