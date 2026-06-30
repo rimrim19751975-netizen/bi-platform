@@ -1,0 +1,14 @@
+version: "2"
+log_level: info
+web_addr: 127.0.0.1:4040
+tunnels:
+  frontend:
+    proto: http
+    addr: 3001
+    bind_tls: true
+    inspect: false
+  backend:
+    proto: http  
+    addr: 5000
+    bind_tls: true
+    inspect: false

@@ -1,0 +1,151 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  SUPER_ADMIN
+  ADMIN
+  ANALYST
+  AGENT
+  VIEWER
+}
+
+model User {
+  id              String    @id @default(uuid())
+  email           String    @unique
+  password        String
+  firstName       String
+  lastName        String
+  role            UserRole  @default(VIEWER)
+  isActive        Boolean   @default(true)
+  twoFactorSecret String?
+  twoFactorEnabled Boolean  @default(false)
+  refreshToken    String?
+  lastLoginAt     DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  auditLogs       AuditLog[]
+  refreshTokens   RefreshToken[]
+
+  @@map("users")
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@map("refresh_tokens")
+}
+
+model ImportedFile {
+  id         String   @id @default(uuid())
+  fileName   String
+  originalName String
+  fileType   String
+  fileSize   Int
+  sheetCount Int
+  status     String   @default("completed")
+  userId     String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  sheets     Sheet[]
+
+  @@map("imported_files")
+}
+
+model Sheet {
+  id          String   @id @default(uuid())
+  fileId      String
+  importedFile ImportedFile @relation(fields: [fileId], references: [id], onDelete: Cascade)
+  name        String
+  tableName   String   @unique
+  rowCount    Int      @default(0)
+  columnCount Int      @default(0)
+  columns     Column[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([fileId])
+  @@map("sheets")
+}
+
+model Column {
+  id          String  @id @default(uuid())
+  sheetId     String
+  sheet       Sheet   @relation(fields: [sheetId], references: [id], onDelete: Cascade)
+  name        String
+  originalName String
+  dataType    String  @default("text")
+  position    Int     @default(0)
+  isNullable  Boolean @default(true)
+  isPrimary   Boolean @default(false)
+
+  @@unique([sheetId, name])
+  @@index([sheetId])
+  @@map("columns")
+}
+
+model TableSchema {
+  id        String   @id @default(uuid())
+  tableName String   @unique
+  schema    Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("table_schemas")
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  action    String
+  entity    String
+  entityId  String?
+  details   Json?
+  ip        String?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([action])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+model Dashboard {
+  id        String   @id @default(uuid())
+  name      String
+  config    Json
+  userId    String
+  isDefault Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("dashboards")
+}
+
+model Report {
+  id          String   @id @default(uuid())
+  name        String
+  type        String
+  config      Json
+  schedule    String?
+  userId      String
+  lastRunAt   DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("reports")
+}

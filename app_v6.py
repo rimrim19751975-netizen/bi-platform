@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import json
 import sqlite3
+import os
 import time
 from datetime import datetime
 import urllib.parse
@@ -64,17 +65,25 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 
 # ==========================================
-# 2. GESTION DES DONNÉES (SQLite)
+# 2. GESTION DES DONNÉES (SQLite / PostgreSQL)
 # ==========================================
 
+DATABASE_URL = os.environ.get("DATABASE_URL", "")
+
 def get_conn():
+    if DATABASE_URL:
+        import psycopg2
+        from psycopg2.extras import RealDictCursor
+        conn = psycopg2.connect(DATABASE_URL)
+        _init_pg(conn)
+        return conn, "pg"
     conn = sqlite3.connect(DB_FILE)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL")
-    _init_db(conn)
-    return conn
+    _init_sqlite(conn)
+    return conn, "sqlite"
 
-def _init_db(conn):
+def _init_sqlite(conn):
     conn.executescript("""
         CREATE TABLE IF NOT EXISTS config (
             id INTEGER PRIMARY KEY CHECK (id = 1),
@@ -112,36 +121,102 @@ def _init_db(conn):
     """)
     conn.commit()
 
+def _init_pg(conn):
+    cur = conn.cursor()
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS config (
+            id INTEGER PRIMARY KEY,
+            active BOOLEAN DEFAULT false,
+            class_name TEXT DEFAULT '',
+            mode TEXT DEFAULT 'unique',
+            question TEXT DEFAULT '',
+            options JSONB DEFAULT '[]',
+            timestamp TEXT DEFAULT ''
+        );
+    """)
+    cur.execute("INSERT INTO config (id) VALUES (1) ON CONFLICT (id) DO NOTHING;")
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS classes (
+            class_name TEXT PRIMARY KEY,
+            phones JSONB DEFAULT '[]'
+        );
+    """)
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS responses (
+            phone TEXT PRIMARY KEY,
+            name TEXT DEFAULT '',
+            answer JSONB DEFAULT '',
+            score REAL DEFAULT 0
+        );
+    """)
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS history (
+            id SERIAL PRIMARY KEY,
+            date TEXT,
+            class_name TEXT,
+            phone TEXT,
+            name TEXT DEFAULT '',
+            question TEXT,
+            answer TEXT,
+            score REAL DEFAULT 0
+        );
+    """)
+    conn.commit()
+    cur.close()
+
+def _exec(conn, db_type, sql, params=None):
+    if db_type == "pg":
+        from psycopg2.extras import RealDictCursor
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        cur.execute(sql.replace("?", "%s"), params or ())
+    else:
+        cur = conn.cursor()
+        cur.execute(sql, params or ())
+    return cur
+
 def load_data():
-    conn = get_conn()
-    c = conn.cursor()
-
-    c.execute("SELECT * FROM config WHERE id = 1")
+    conn, db_type = get_conn()
+    c = _exec(conn, db_type, "SELECT * FROM config WHERE id = 1")
     row = c.fetchone()
-    config = {
-        "active": bool(row["active"]),
-        "class_name": row["class_name"],
-        "mode": row["mode"],
-        "question": row["question"],
-        "options": json.loads(row["options"]),
-        "timestamp": row["timestamp"]
-    }
+    if db_type == "pg":
+        config = {
+            "active": bool(row["active"]),
+            "class_name": row["class_name"],
+            "mode": row["mode"],
+            "question": row["question"],
+            "options": row["options"] if isinstance(row["options"], list) else json.loads(row["options"]),
+            "timestamp": row["timestamp"]
+        }
+    else:
+        config = {
+            "active": bool(row["active"]),
+            "class_name": row["class_name"],
+            "mode": row["mode"],
+            "question": row["question"],
+            "options": json.loads(row["options"]),
+            "timestamp": row["timestamp"]
+        }
+    c.close()
 
-    c.execute("SELECT * FROM classes")
+    c = _exec(conn, db_type, "SELECT * FROM classes")
     classes = {}
     for r in c.fetchall():
-        classes[r["class_name"]] = json.loads(r["phones"])
+        p = r["phones"] if isinstance(r["phones"], list) else json.loads(r["phones"])
+        classes[r["class_name"]] = p
+    c.close()
 
-    c.execute("SELECT * FROM responses")
+    c = _exec(conn, db_type, "SELECT * FROM responses")
     responses = {}
     for r in c.fetchall():
+        ans = r["answer"] if isinstance(r["answer"], (list, dict)) else json.loads(r["answer"])
         responses[r["phone"]] = {
             "name": r["name"],
-            "answer": json.loads(r["answer"]),
+            "answer": ans,
             "score": r["score"]
         }
+    c.close()
 
-    c.execute("SELECT * FROM history ORDER BY id")
+    c = _exec(conn, db_type, "SELECT * FROM history ORDER BY id")
     history = []
     for r in c.fetchall():
         history.append({
@@ -153,39 +228,42 @@ def load_data():
             "Réponse": r["answer"],
             "Score": r["score"]
         })
+    c.close()
 
+    if db_type == "pg":
+        conn.commit()
     conn.close()
     return {"config": config, "classes": classes, "responses": responses, "history": history}
 
 def save_data(data):
-    conn = get_conn()
-    c = conn.cursor()
+    conn, db_type = get_conn()
 
-    c.execute("""
+    _exec(conn, db_type, """
         UPDATE config SET active=?, class_name=?, mode=?, question=?, options=?, timestamp=?
         WHERE id = 1
     """, (
-        int(data["config"]["active"]),
+        True if db_type == "pg" else int(data["config"]["active"]),
         data["config"]["class_name"],
         data["config"]["mode"],
         data["config"]["question"],
-        json.dumps(data["config"]["options"], ensure_ascii=False),
+        json.dumps(data["config"]["options"], ensure_ascii=False) if db_type != "pg" else data["config"]["options"],
         data["config"]["timestamp"]
     ))
 
-    c.execute("DELETE FROM classes")
+    _exec(conn, db_type, "DELETE FROM classes")
     for cls_name, phones in data["classes"].items():
-        c.execute("INSERT INTO classes (class_name, phones) VALUES (?, ?)",
-                   (cls_name, json.dumps(phones, ensure_ascii=False)))
+        val = json.dumps(phones, ensure_ascii=False) if db_type != "pg" else phones
+        _exec(conn, db_type, "INSERT INTO classes (class_name, phones) VALUES (?, ?)", (cls_name, val))
 
-    c.execute("DELETE FROM responses")
+    _exec(conn, db_type, "DELETE FROM responses")
     for phone, info in data["responses"].items():
-        c.execute("INSERT INTO responses (phone, name, answer, score) VALUES (?, ?, ?, ?)",
-                   (phone, info["name"], json.dumps(info["answer"], ensure_ascii=False), info["score"]))
+        val = json.dumps(info["answer"], ensure_ascii=False) if db_type != "pg" else info["answer"]
+        _exec(conn, db_type, "INSERT INTO responses (phone, name, answer, score) VALUES (?, ?, ?, ?)",
+               (phone, info["name"], val, info["score"]))
 
-    c.execute("DELETE FROM history")
+    _exec(conn, db_type, "DELETE FROM history")
     for entry in data["history"]:
-        c.execute("""
+        _exec(conn, db_type, """
             INSERT INTO history (date, class_name, phone, name, question, answer, score)
             VALUES (?, ?, ?, ?, ?, ?, ?)
         """, (
