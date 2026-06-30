@@ -1,5 +1,5 @@
-import serverless from 'serverless-http';
-import { prisma } from '../src/index';
-import app from '../src/index';
+import app from '../dist/index';
 
-export const handler = serverless(app);
+export default function handler(req: any, res: any) {
+  app(req, res);
+}
