@@ -16,3 +16,16 @@ exports/*
 !exports/.gitkeep
 *.db
 data/
+start.ps1
+start_services.bat
+ngrok.yml
+ngrok*.log
+*.pid
+server_out.log
+server_err.log
+server.log
+next_out.log
+next_err.log
+tunnel.log
+*.bak
+templates/
